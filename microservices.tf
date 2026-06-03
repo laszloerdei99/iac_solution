@@ -2,10 +2,6 @@ resource "kubernetes_deployment_v1" "filegrab" {
   metadata {
     name      = "filegrab"
     namespace = var.namespace
-
-    labels = {
-      app = "filegrab"
-    }
   }
 
   spec {
@@ -27,7 +23,7 @@ resource "kubernetes_deployment_v1" "filegrab" {
       spec {
         container {
           name              = "filegrab"
-          image             = "filegrab:latest"
+          image             = var.images.filegrab
           image_pull_policy = "IfNotPresent"
 
           port {
@@ -78,7 +74,8 @@ resource "kubernetes_deployment_v1" "filegrab" {
 
   depends_on = [
     kubernetes_config_map_v1.ocr_services_config,
-    kubernetes_service_v1.redis
+    kubernetes_service_v1.redis,
+    kubernetes_service_v1.minio
   ]
 }
 
@@ -101,20 +98,12 @@ resource "kubernetes_service_v1" "filegrab" {
       node_port   = var.filegrab_node_port
     }
   }
-
-  depends_on = [
-    kubernetes_deployment_v1.filegrab
-  ]
 }
 
 resource "kubernetes_deployment_v1" "pdf_to_image" {
   metadata {
     name      = "pdf-to-image"
     namespace = var.namespace
-
-    labels = {
-      app = "pdf-to-image"
-    }
   }
 
   spec {
@@ -136,7 +125,7 @@ resource "kubernetes_deployment_v1" "pdf_to_image" {
       spec {
         container {
           name              = "pdf-to-image"
-          image             = "pdf-to-image:latest"
+          image             = var.images.pdf_to_image
           image_pull_policy = "IfNotPresent"
 
           env_from {
@@ -163,7 +152,8 @@ resource "kubernetes_deployment_v1" "pdf_to_image" {
 
   depends_on = [
     kubernetes_config_map_v1.ocr_services_config,
-    kubernetes_service_v1.redis
+    kubernetes_service_v1.redis,
+    kubernetes_service_v1.minio
   ]
 }
 
@@ -196,7 +186,7 @@ resource "kubernetes_deployment_v1" "preprocessing" {
       spec {
         container {
           name              = "preprocessing"
-          image             = "preprocessing:latest"
+          image             = var.images.preprocessing
           image_pull_policy = "IfNotPresent"
 
           env_from {
@@ -223,7 +213,9 @@ resource "kubernetes_deployment_v1" "preprocessing" {
 
   depends_on = [
     kubernetes_config_map_v1.ocr_services_config,
-    kubernetes_service_v1.redis
+    kubernetes_service_v1.redis,
+    kubernetes_service_v1.minio,
+    kubernetes_service_v1.rabbitmq
   ]
 }
 
@@ -256,7 +248,7 @@ resource "kubernetes_deployment_v1" "ocr" {
       spec {
         container {
           name              = "ocr"
-          image             = "ocr:latest"
+          image             = var.images.ocr
           image_pull_policy = "IfNotPresent"
 
           env_from {
@@ -282,7 +274,10 @@ resource "kubernetes_deployment_v1" "ocr" {
   }
 
   depends_on = [
-    kubernetes_config_map_v1.ocr_services_config
+    kubernetes_config_map_v1.ocr_services_config,
+    kubernetes_service_v1.minio,
+    kubernetes_service_v1.rabbitmq,
+    kubernetes_service_v1.kafka
   ]
 }
 
@@ -290,10 +285,6 @@ resource "kubernetes_deployment_v1" "text_aggregation" {
   metadata {
     name      = "text-aggregation"
     namespace = var.namespace
-
-    labels = {
-      app = "text-aggregation"
-    }
   }
 
   spec {
@@ -315,7 +306,7 @@ resource "kubernetes_deployment_v1" "text_aggregation" {
       spec {
         container {
           name              = "text-aggregation"
-          image             = "text-aggregation:latest"
+          image             = var.images.text_aggregation
           image_pull_policy = "IfNotPresent"
 
           env_from {
@@ -342,6 +333,8 @@ resource "kubernetes_deployment_v1" "text_aggregation" {
 
   depends_on = [
     kubernetes_config_map_v1.ocr_services_config,
-    kubernetes_service_v1.redis
+    kubernetes_service_v1.minio,
+    kubernetes_service_v1.redis,
+    kubernetes_service_v1.kafka
   ]
 }
